@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <title>Iris Scatterplot</title>
+        <script type="text/javascript" src="d3/d3.js"></script>
+        <style type="text/css">
+          .axis path,
+          .axis line{
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+          }
+          .axis text {
+            font-family : sans-serif;
+            font-size: 10px;
+          }
+        </style>
+    </head>
+	
+	<body>
+	
+	<script type="text/javascript">
+				
+			// Svg parameters
+			var w = 600;
+			var h = 400;
+			var barPadding = 1;
+			var xAxisPadding = 20;
+			var yAxisPadding = 30;
+			var svg = d3.select("body").append("svg")
+				.attr("width", w)
+				.attr("height", h);
+			
+			// Load Dataset
+			var dataset;
+			
+			d3.csv("data/iris.csv", function(error,data) {
+				// Test
+				if (error){console.log(error)}
+				
+				else{console.log(data);
+					// Save data
+					dataset = data;
+					
+					// Extremums
+					var Xmin = d3.min(dataset, function(d) {
+												return d.sepal_width;});
+					var Xmax = d3.max(dataset, function(d) {
+												return d.sepal_width;});
+					var Ymin = d3.min(dataset, function(d) {
+												return d.sepal_length;});
+					var Ymax = d3.max(dataset, function(d) {
+												return d.sepal_length;});
+					
+					
+					// Create scales
+					var scaleX = d3.scaleLinear()
+						.domain([Xmin,Xmax])
+						.range([yAxisPadding,w - yAxisPadding]);
+					var scaleY = d3.scaleLinear()
+						.domain([Ymin,Ymax])
+						.range([h - xAxisPadding,xAxisPadding]);
+					
+					// Symbol definition
+					var symbol = d3.symbol().size([1500]),
+							color = d3.schemeCategory10;
+					
+					// Create dots (circles)
+					svg.selectAll("circle").data(dataset).enter()
+						.append("circle")
+						.attr("cx",function(d) {
+								return scaleX(d.sepal_width);
+						   })
+						.attr("cy", function(d) {
+							return scaleY(d.sepal_length);
+					   })
+						.attr("r", 2)
+						.attr('fill',function(d){
+							if (d.species == "setosa"){return "blue"}
+							else if (d.species == "versicolor"){return "green"}
+							else if (d.species == "virginica"){return "purple"}
+						})
+						.attr("d", function(d) {
+							if (d.species == "setosa"){return d3.symbol().type(symbolCircle);}
+							else if (d.species == "versicolor"){return d3.symbol().type(symbolCross);}
+							else if (d.species == "virginica"){return d3.symbol().type(d3.symbolStar);}
+						});
+						
+					// Create labels
+					/*svg.selectAll("text")
+						.data(dataset)
+						.enter()
+						.append("text")
+						.text(function(d) {
+							return d.sepal_width + "," + d.sepal_length;
+					   })
+						.attr("x", function(d) {
+							return scaleX(d.sepal_width);
+					   })
+						.attr("y", function(d) {
+							return scaleY(d.sepal_length);
+					   })
+						.attr("font-family", "sans-serif")
+						.attr("font-size", "11px")
+						.attr("fill", "red");*/
+					   
+					// Create axis
+					var xAxis = d3.axisBottom()
+						.scale(scaleX);
+					
+					var yAxis = d3.axisLeft()
+						.scale(scaleY);
+						
+					svg.append("g")
+						.attr("class","axis")
+						.attr("transform", "translate(0," + (h - xAxisPadding) + ")")
+						.call(xAxis);
+						
+					svg.append("g")
+						.attr("class", "axis")
+						.attr("transform", "translate(" + yAxisPadding + ",0)")
+						.call(yAxis);
+				}
+			});
+        </script>
+    </body>
+</html>

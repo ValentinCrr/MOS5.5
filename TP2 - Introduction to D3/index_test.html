@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <title>Test d3</title>
+        <script type="text/javascript" src="d3/d3.js"></script>
+    </head>
+	
+    <body>
+		<div>
+		lalala
+		</div>
+        <script type="text/javascript">
+            // First paragraph
+			d3.select("body").append("p").text("New paragraph!");
+				
+			// Svg parameters
+			var w = 500;
+			var h = 300;
+			var barPadding = 1;
+			var svg = d3.select("body")
+				.append("svg")
+				.attr("width", w)
+				.attr("height", h);
+			
+			// Load Dataset
+			var dataset;
+			
+			d3.csv("data/iris.csv", function(error,data) {
+				// Test
+				if (error){console.log(error)}
+				
+				else{console.log(data);
+					// Save data
+					dataset = data;
+					var rectangles = svg.selectAll("rect")
+						.data(dataset)
+						.enter()
+						.append("rect")
+						.attr("x",function(d, i) {
+							return i * (w / dataset.length);})
+						.attr("width",w / dataset.length - barPadding)
+						.attr("height",function(d) { return 50*d.sepal_width; })
+						.attr("y",function(d, i) {
+							return h-50*d.sepal_width})
+						.attr("fill", function(d) {
+							return "rgb(0, 0, " + (d.sepal_width * 40) + ")"})
+						.attr('stroke','black');}
+				});
+        </script>
+    </body>
+</html>
