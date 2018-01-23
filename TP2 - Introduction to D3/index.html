@@ -6,29 +6,52 @@
         <title>Iris Scatterplot</title>
         <script type="text/javascript" src="d3/d3.js"></script>
         <style type="text/css">
-          .axis path,
-          .axis line{
-            fill: none;
-            stroke: black;
-            shape-rendering: crispEdges;
-          }
-          .axis text {
-            font-family : sans-serif;
-            font-size: 10px;
-          }
+			.axis path,
+			.axis line{
+				fill: none;
+				stroke: black;
+				shape-rendering: crispEdges;
+			  }
+			.axis text {
+				font-family : sans-serif;
+				font-size: 10px;
+			  }
+		  	.regression {
+			  stroke-width: 2px;
+			  stroke: red;
+			  stroke-dasharray: 10,5;
+			}
+			.grid line {
+			  stroke: lightgrey;
+			  stroke-opacity: 0.7;
+			  shape-rendering: crispEdges;
+			}
+
+			.grid path {
+			  stroke-width: 0;
+			}
+			
+			.graphIitle text {
+				font-family : sans-serif;
+				font-size: 25px;
+			}
         </style>
     </head>
 	
 	<body>
 	
 	<script type="text/javascript">
-				
+			
+			// Data parameters :
+			x_coord = "petal_width";
+			y_coord = "petal_length";
+			
 			// Svg parameters
-			var w = 600;
+			var w = 650;
 			var h = 400;
 			var barPadding = 1;
-			var xAxisPadding = 20;
-			var yAxisPadding = 30;
+			var xAxisPadding = 70;
+			var yAxisPadding = 50;
 			var svg = d3.select("body").append("svg")
 				.attr("width", w)
 				.attr("height", h);
@@ -46,66 +69,36 @@
 					
 					// Extremums
 					var Xmin = d3.min(dataset, function(d) {
-												return d.sepal_width;});
+												return d.petal_width;});
 					var Xmax = d3.max(dataset, function(d) {
-												return d.sepal_width;});
+												return d.petal_width;});
 					var Ymin = d3.min(dataset, function(d) {
-												return d.sepal_length;});
+												return d.petal_length;});
 					var Ymax = d3.max(dataset, function(d) {
-												return d.sepal_length;});
+												return d.petal_length;});
 					
+					//**********************************//
+					// 			Graph Setup				//
+					//**********************************//
 					
+					// Graph title
+
+					svg.append("text")
+						.attr("class","graphIitle")
+						.attr("x", (w / 2))             
+						.attr("y", 0 + (xAxisPadding / 2))
+						.attr("text-anchor", "middle")  
+						.text("Iris Dataset Scatterplot")
+						.style("font-size","25px");
+		
 					// Create scales
 					var scaleX = d3.scaleLinear()
-						.domain([Xmin,Xmax])
+						.domain([0,Xmax])
 						.range([yAxisPadding,w - yAxisPadding]);
 					var scaleY = d3.scaleLinear()
-						.domain([Ymin,Ymax])
+						.domain([0,Ymax])
 						.range([h - xAxisPadding,xAxisPadding]);
 					
-					// Symbol definition
-					var symbol = d3.symbol().size([1500]),
-							color = d3.schemeCategory10;
-					
-					// Create dots (circles)
-					svg.selectAll("circle").data(dataset).enter()
-						.append("circle")
-						.attr("cx",function(d) {
-								return scaleX(d.sepal_width);
-						   })
-						.attr("cy", function(d) {
-							return scaleY(d.sepal_length);
-					   })
-						.attr("r", 2)
-						.attr('fill',function(d){
-							if (d.species == "setosa"){return "blue"}
-							else if (d.species == "versicolor"){return "green"}
-							else if (d.species == "virginica"){return "purple"}
-						})
-						.attr("d", function(d) {
-							if (d.species == "setosa"){return d3.symbol().type(symbolCircle);}
-							else if (d.species == "versicolor"){return d3.symbol().type(symbolCross);}
-							else if (d.species == "virginica"){return d3.symbol().type(d3.symbolStar);}
-						});
-						
-					// Create labels
-					/*svg.selectAll("text")
-						.data(dataset)
-						.enter()
-						.append("text")
-						.text(function(d) {
-							return d.sepal_width + "," + d.sepal_length;
-					   })
-						.attr("x", function(d) {
-							return scaleX(d.sepal_width);
-					   })
-						.attr("y", function(d) {
-							return scaleY(d.sepal_length);
-					   })
-						.attr("font-family", "sans-serif")
-						.attr("font-size", "11px")
-						.attr("fill", "red");*/
-					   
 					// Create axis
 					var xAxis = d3.axisBottom()
 						.scale(scaleX);
@@ -122,6 +115,153 @@
 						.attr("class", "axis")
 						.attr("transform", "translate(" + yAxisPadding + ",0)")
 						.call(yAxis);
+					
+					// Axis titles
+					
+					svg.append("text")
+						.attr("transform", "rotate(-90)")
+						.attr("y", 0)
+						.attr("x",0 - (h/2))
+						.attr("dy", "1em")
+						.style("text-anchor", "middle")
+						.text(y_coord.replace(/_/g, ' '));   
+	  
+					svg.append("text")             
+						.attr("transform","translate(" + (w/2) + " ," + 
+                           (h - yAxisPadding + 20) + ")")
+						.style("text-anchor", "middle")
+						.text(x_coord.replace(/_/g, ' '));
+	  
+					// gridlines in X axis function
+					function make_x_gridlines() {		
+						return d3.axisBottom(scaleX)
+							.ticks(5)
+					}
+
+					// gridlines in Y axis function
+					function make_y_gridlines() {		
+						return d3.axisLeft(scaleY)
+							.ticks(5)
+					}
+					
+					// add the X gridlines
+					svg.append("g")			
+						.attr("class", "grid")
+						.attr("transform", "translate(0," + (h - xAxisPadding) + ")")
+						.call(make_x_gridlines()
+							  .tickSize(2*xAxisPadding-h)
+							  .tickFormat("")
+						  )
+
+					// add the Y gridlines
+					svg.append("g")			
+						.attr("class", "grid")
+						.attr("transform", "translate(" + yAxisPadding + ",0)")
+						.call(make_y_gridlines()
+							  .tickSize(2*yAxisPadding-w)
+							  .tickFormat("")
+						  )
+		
+					//*************************//
+					// 	 Regression function   //
+					//*************************//
+					function regression(data, x, y, minX, maxX){
+						// Takes 5 parameters :
+						// (1) The dataset
+						// (2) Column of data plotted on x-axis
+						// (3) Column of data plotted on y-axis
+						// (4) Minimum value of x-axis
+						// (5) Maximum value of y-axis
+						
+						// Initialization
+						var n = data.length;
+						var sum = 0;
+						var xSum = 0;
+						var ySum = 0;
+						var sumSq = 0;
+						
+						// Build (x,y,x*y) array  
+						var pts = [];
+						data.forEach(function(d,i){
+							var obj = {};
+							obj.x = Number(d[x]);
+							obj.y = Number(d[y]);
+							obj.mult = obj.x*obj.y;
+							pts.push(obj);
+						});
+						
+						// Compute slope and intercept
+						pts.forEach(function(pt){
+							sum = sum + pt.mult;
+							xSum = xSum + pt.x;
+							ySum = ySum + pt.y;
+							sumSq = sumSq + (pt.x * pt.x);
+						  });
+						var a = sum * n;
+						var b = xSum * ySum;
+						var c = sumSq * n;
+						var d = xSum * xSum;
+						var m = (a - b) / (c - d); 		// Slope
+						var b = ( ySum - m*xSum ) / n; 	// Intercept
+						
+						// Return 2 points for regression line
+						return{
+							    ptA : {
+								  x: minX,
+								  y: m * minX + b
+								},
+								ptB : {
+								  y: m * maxX + b,
+								  x: maxX
+								}
+							}
+						}
+					
+					//**********************//
+					//	  Regression line   //
+					//**********************//
+					
+					var lg = regression(data, "petal_width", "petal_length", Xmin, Xmax);
+					
+					svg.append("line")
+						.attr("class", "regression")
+						.attr("x1", scaleX(lg.ptA.x))
+						.attr("y1", scaleY(lg.ptA.y))
+						.attr("x2", scaleX(lg.ptB.x))
+						.attr("y2", scaleY(lg.ptB.y));
+					
+					//**********************//
+					//		Data plots		//
+					//**********************//
+					
+					svg.append("g")		// Add new group (containing all dots)
+						.selectAll("path")	
+						.data(dataset)
+						.enter()
+						.append("path")	// added new path
+						
+						// (x,y) coordinates
+						.attr("transform",function(d) {return "translate(" + scaleX(d.petal_width) +","+scaleY(d.petal_length)+")" ;})
+						
+						// Change symbol
+						.attr("d", function(d) {
+							if (d.species == "setosa") {return d3.symbol()
+													.type(d3.symbolCircle)
+													.size(20)(); }
+							else if (d.species == "versicolor") {return d3.symbol()
+													.type(d3.symbolStar)
+													.size(20)(); }
+							else {return d3.symbol()
+													.type(d3.symbolWye)
+													.size(20)(); }
+							})
+							
+						// change color
+						.attr('fill',function(d){
+							if (d.species == "setosa"){return "blue"}
+							else if (d.species == "versicolor"){return "green"}
+							else if (d.species == "virginica"){return "purple"}
+						})	
 				}
 			});
         </script>
