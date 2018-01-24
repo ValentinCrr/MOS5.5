@@ -5,6 +5,7 @@
         <meta charset="utf-8">
         <title>Iris Scatterplot</title>
         <script type="text/javascript" src="d3/d3.js"></script>
+		<script src="d3-tip/index.js"></script>
         <style type="text/css">
 			.axis path,
 			.axis line{
@@ -31,9 +32,24 @@
 			  stroke-width: 0;
 			}
 			
-			.graphIitle text {
+			.graphTitle text {
 				font-family : sans-serif;
 				font-size: 25px;
+			}
+			  
+			.d3-tip {
+			  line-height: 1;
+			  padding: 6px;
+			  background: rgba(0, 0, 0, 0.8);
+			  color: #fff;
+			  border-radius: 4px;
+			  font-size: 12px;
+			}
+		 
+			.zoom {
+			  cursor: move;
+			  fill: none;
+			  pointer-events: all;
 			}
         </style>
     </head>
@@ -52,6 +68,18 @@
 			var barPadding = 1;
 			var xAxisPadding = 70;
 			var yAxisPadding = 50;
+			var xLegend = 1.5*yAxisPadding;
+			var yLegend = xAxisPadding;
+			
+			const symbolScale = d3.scaleOrdinal()
+				.range([d3.symbol().type(d3.symbolCircle).size(20)(), 
+						d3.symbol().type(d3.symbolStar).size(20)(),
+						d3.symbol().type(d3.symbolWye).size(20)()
+						]);
+		
+			const colorScale = d3.scaleOrdinal()
+				.range(["#eb8e37", "#1ac6cf", "#12854b"]);
+			
 			var svg = d3.select("body").append("svg")
 				.attr("width", w)
 				.attr("height", h);
@@ -106,12 +134,12 @@
 					var yAxis = d3.axisLeft()
 						.scale(scaleY);
 						
-					svg.append("g")
+					var gX = svg.append("g")
 						.attr("class","axis")
 						.attr("transform", "translate(0," + (h - xAxisPadding) + ")")
 						.call(xAxis);
 						
-					svg.append("g")
+					var gY = svg.append("g")
 						.attr("class", "axis")
 						.attr("transform", "translate(" + yAxisPadding + ",0)")
 						.call(yAxis);
@@ -218,24 +246,46 @@
 						}
 					
 					//**********************//
+					//		Drawing area	//
+					//**********************//
+					
+					// Drawing area
+					var view = svg.append("g") // Add new group (containing all dots)
+						.attr("class", "view");
+					
+					//**********************//
 					//	  Regression line   //
 					//**********************//
 					
 					var lg = regression(data, "petal_width", "petal_length", Xmin, Xmax);
 					
-					svg.append("line")
+					var regressionLine = view.append("line")
 						.attr("class", "regression")
 						.attr("x1", scaleX(lg.ptA.x))
 						.attr("y1", scaleY(lg.ptA.y))
 						.attr("x2", scaleX(lg.ptB.x))
-						.attr("y2", scaleY(lg.ptB.y));
+						.attr("y2", scaleY(lg.ptB.y))
 					
 					//**********************//
 					//		Data plots		//
 					//**********************//
+						
+					// Create tool_tip : dot info
+					var tool_tip = d3.tip()
+						  .attr("class", "d3-tip")
+						  .offset([-10, 0])
+						  .html(function(d) {
+							return "Petal length : " + d.petal_length + "<br>" + "Petal width : " + d.petal_width + "<br>" + "Sepal length : " + d.sepal_length + "<br>" + "Sepal width : " + d.sepal_width;
+						  });
+	  
+					svg.call(tool_tip);
 					
-					svg.append("g")		// Add new group (containing all dots)
-						.selectAll("path")	
+					// Create zoom behavior
+					var zoomBeh = d3.zoom()
+						.on("zoom", zoomFunction);
+					
+					// Create and display dots
+					var dots = view.selectAll("path")	
 						.data(dataset)
 						.enter()
 						.append("path")	// added new path
@@ -244,25 +294,124 @@
 						.attr("transform",function(d) {return "translate(" + scaleX(d.petal_width) +","+scaleY(d.petal_length)+")" ;})
 						
 						// Change symbol
-						.attr("d", function(d) {
-							if (d.species == "setosa") {return d3.symbol()
-													.type(d3.symbolCircle)
-													.size(20)(); }
-							else if (d.species == "versicolor") {return d3.symbol()
-													.type(d3.symbolStar)
-													.size(20)(); }
-							else {return d3.symbol()
-													.type(d3.symbolWye)
-													.size(20)(); }
-							})
+						.attr("d", d => symbolScale(d.species))
 							
 						// change color
-						.attr('fill',function(d){
-							if (d.species == "setosa"){return "blue"}
-							else if (d.species == "versicolor"){return "green"}
-							else if (d.species == "virginica"){return "purple"}
-						})	
+						.attr('fill',d => colorScale(d.species))
+						
+						// Display details on "mouseover"
+						.on("mouseover", tool_tip.show)
+						.on("mouseout", tool_tip.hide);
+						
+					// append zoom area
+					var zoomArea = svg.append("rect")
+					  .attr("class", "zoom")
+					  .attr("width", w)
+					  .attr("height", h)
+					  .call(zoomBeh);
+					
+					//**************************//
+					//			Legend			//
+					//**************************//
+					
+					Leg = svg.append("rect")
+						.attr("x",xLegend)
+						.attr("y",yLegend)
+						.attr("width",100)
+						.attr("height",105)
+						.attr("fill","white")
+						.attr("stroke","black")
+						.attr("stroke-width","0.5");
+						
+					svg.call(colorLegend, {
+						colorScale: colorScale,
+						positionX: xLegend+10,	//  Box content X position
+						positionY: yLegend+45,	//  Box content Y position
+						tickRadius: 10,
+						tickSpacing: 22,
+						tickPadding: 8,
+						label: "Species",
+						labelX: 15,
+						labelY: -25
+						});
+					
+					
+					//**************************//
+					//		Other functions		//
+					//**************************//
+
+					// Coloring fucntion
+					function colorLegend(selection, props){
+						const colorScale = props.colorScale;
+						const positionX = props.positionX;
+						const positionY = props.positionY;
+						const tickRadius = props.tickRadius;
+						const tickSpacing = props.tickSpacing;
+						const tickPadding = props.tickPadding;
+						const label = props.label;
+						const labelX = props.labelX;
+						const labelY = props.labelY;
+						
+						let legendG = selection
+						  .selectAll(".legend--color")
+						  .data([null]);
+						legendG = legendG
+						  .enter().append("g")
+							.attr("class", "legend legend--color")
+						  .merge(legendG)
+							.attr("transform", `translate(${positionX}, ${positionY})`);
+						
+						const legendLabel = legendG
+						  .selectAll(".legend__label")
+						  .data([null]);
+						  
+						legendLabel
+						  .enter().append("text")
+							.attr("class", "legend__label")
+							.merge(legendLabel)
+							.attr("x", labelX)
+							.attr("y", labelY)
+							.text(label);
+						
+						const ticks = legendG
+							.selectAll(".tick")
+							.data(colorScale.domain())
+							
+						const ticksEnter = ticks
+							.enter().append("g")
+							.attr("class", "tick");
+							
+						ticksEnter
+							.merge(ticks)
+							.attr("transform", (d, i) => `translate(0, ${i * tickSpacing})`);
+						ticks.exit().remove();
+						
+						
+						ticksEnter
+							.append("g").append("path")
+							.attr("d", symbolScale)
+							.attr("fill", colorScale);
+						
+						ticksEnter
+						  .append("text")
+						  .merge(ticks.select("text"))
+							.attr("x", tickRadius + tickPadding)
+							.attr("y", 3)
+							.text(d => d);
+					  }
+
 				}
+				
+				// Zoom functions
+				function zoomFunction() {
+					
+					// update dots view
+					view.attr("transform", d3.event.transform);
+					
+					// update axes
+					gX.call(xAxis.scale(d3.event.transform.rescaleX(scaleX)));
+					gY.call(yAxis.scale(d3.event.transform.rescaleY(scaleY)));
+					};
 			});
         </script>
     </body>
