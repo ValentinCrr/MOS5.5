@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <script src="d3/d3.min.js"></script>
+  <style>
+    body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
+	
+	div.tooltip {
+	color: #222;
+	background-color: #fff;
+	padding: .5em;
+	text-shadow: #f5f5f5 0 1px 0;
+	border-radius: 2px;
+	opacity: 0.9;
+	position: absolute;
+    }
+  </style>
+</head>
+
+<body>
+<form>
+  <label><input type="radio" name="mode" value="05/01/14" checked> 05/01/14</label>
+  <label><input type="radio" name="mode" value="12/01/14"> 12/01/14</label>
+  <label><input type="radio" name="mode" value="19/01/14"> 19/01/14</label>
+  <label><input type="radio" name="mode" value="26/01/14" checked> 26/01/14</label>
+  <label><input type="radio" name="mode" value="02/02/14" checked> 02/02/14</label>
+  <label><input type="radio" name="mode" value="09/02/14" checked> 09/02/14</label>
+  <label><input type="radio" name="mode" value="Novembre"> Novembre 2014</label>
+  <label><input type="radio" name="mode" value="somme2014">Année 2014</label>
+  <label><input type="radio" name="mode" value="All"> Animation</label>
+</form>
+
+  <script>
+		var width = 1080,
+  		  height = 720;
+
+		var svg = d3.select( "body" )
+  		.append( "svg" )
+		  .attr( "width", width )
+		  .attr( "height", height );
+
+		var tooltip = d3.select('body').append('div')
+            .attr('class', 'hidden tooltip');
+		  
+		var color = d3.scaleLinear()
+				.range(["cyan","blue"])
+				.domain([0,250]);
+		  
+    var projection = d3.geoConicConformal() // d3.geo.albersUsa avec d3 version 3
+    			.center([2.454071, 46.279229])
+				.scale(2800)
+				.translate([width/2, height/2]);
+
+    var path = d3.geoPath() // d3.geo.path avec d3 version 3
+                 .projection(projection);
+
+		
+	// Parse time
+	var parseTime = d3.timeParse("%d/%m/%y");
+	var formatTime = d3.timeFormat("%m/%y");			 
+				 
+	console.log();
+	
+	var dates = ["05/01/14","12/01/14","19/01/14","26/01/14","02/02/14","09/02/14","16/02/14","23/02/14","02/03/14","09/03/14","16/03/14","23/03/14","30/03/14","06/04/14","13/04/14","20/04/14","27/04/14","04/05/14","11/05/14","18/05/14","25/05/14","01/06/14","08/06/14","15/06/14","22/06/14","29/06/14","06/07/14","13/07/14","20/07/14","27/07/14","03/08/14","10/08/14","17/08/14","24/08/14","31/08/14","07/09/14","14/09/14","21/09/14","28/09/14","05/10/14","12/10/14","19/10/14","26/10/14","02/11/14","09/11/14","16/11/14","23/11/14","30/11/14","07/12/14","14/12/14","21/12/14","28/12/14","somme2014"];
+	
+		d3.csv("data/GrippeFrance2014.csv", function(data){		
+			
+				d3.json("data/regions.json", function(json) {
+					var map = svg.selectAll("path")
+					   .data(json.features)
+					   .enter()
+					   .append("path")
+					   .attr("fill","balck");
+			
+			// Initialize map
+			mapInit();
+			
+			function mapInit(){
+				map.attr("fill","black")
+				   .attr("d", path)// tooltip
+					.on('mousemove', function(d) {
+							var mouse = d3.mouse(svg.node()).map(function(d) {
+								return parseInt(d);
+							});
+							tooltip.classed('hidden', false)
+								.attr('style', 'left:' + (mouse[0] + 15) +
+										'px; top:' + (mouse[1] - 35) + 'px')
+								.html(d.properties.nom);
+						})
+						// delete tooltip
+						.on('mouseout', function() {
+							tooltip.classed('hidden', true);
+						});
+				}
+			
+			// Update map with new values
+			function mapUpdate(date){
+				console.log("Update pour la date "+date);
+				map.transition()
+					.duration(1500)
+					.attr("fill",function(d){
+						var region_i = d.properties.nom;
+						
+						
+						for(var i=0;i<20;i++){
+							if (data[i].region == region_i){return color(data[i][date]);}
+						}})
+						
+					   .attr("d", path)
+				}
+				
+			// Display sum for November
+			function mapNovembre(){
+				// Update map
+				map.transition()
+					.duration(1500)
+					.attr("fill",function(d){
+						var region_i = d.properties.nom;
+						
+						for(var i=0;i<20;i++){
+							if (data[i].region == region_i){
+							// Sum for region_i during November
+							var sommeNov = 0
+							for (var j=0;j<dates.length;j++){
+								var date_testee = dates[j];
+								// Test if date = XX/November
+								if (formatTime(parseTime(date_testee))=="11/14"){
+									sommeNov = sommeNov+Number(data[i][date_testee])}
+								}
+								return color(sommeNov);}
+						}
+						// end of "fill" attribute
+						})
+				   .attr("d", path);
+			}
+			
+			
+			// Loop on each date
+			function printAll(){
+				for (var j = 0; j<dates.length-1; j++){
+					mapUpdate(dates[j]);}
+			};
+				
+			// Timeout function			
+			function sleep(miliseconds) {
+			   var currentTime = new Date().getTime();
+
+			   while (currentTime + miliseconds >= new Date().getTime()) {
+			   }
+			}
+					
+					
+			d3.selectAll("input")
+				.on("change", changed);
+			  
+			function changed() {
+				if(this.value == "Novembre"){mapNovembre()}
+				else if (this.value == "All"){printAll()}
+				else {mapUpdate(this.value)}
+					}
+					
+					});
+				
+		
+		});
+  </script>
+</body>
